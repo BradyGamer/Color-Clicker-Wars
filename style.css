@@ -4,9 +4,7 @@ body {
   text-align: center;
   margin: 0;
   padding: 20px;
-  background-color: #000;
-  background-image: radial-gradient(circle, red, orange, yellow, green, cyan, blue, purple, red);
-  background-size: cover;
+  background-color: #000; /* solid black background */
   color: #fff;
   transition: background-color 0.3s ease-in-out;
 }
@@ -44,7 +42,7 @@ h1 {
   cursor: pointer;
   border: none;
   border-radius: 10px;
-  color: black;
+  color: black; /* default text color for light colors */
   text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -54,8 +52,9 @@ h1 {
   box-shadow: 0 4px 15px rgba(0,0,0,0.4);
 }
 
-/* Button text color for dark backgrounds */
-.color-box[style*="background-color: black"] {
+/* Text color adjustments for dark colors (optional) */
+.color-box[style*="background-color: blue"],
+.color-box[style*="background-color: purple"] {
   color: white;
 }
 
