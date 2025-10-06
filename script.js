@@ -1,37 +1,59 @@
-// Colors to vote for (removed black)
-const colors = ['white', 'red', 'green', 'blue', 'grey', 'purple', 'pink'];
+// --------------------
+// Firebase Modular SDK
+// --------------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
-// Store votes and chart history
+// --------------------
+// Firebase config - REPLACE with your project info
+// --------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyAQBoU3wj7txtOI0DnRbzRNfPz1q9pbOL4",
+  authDomain: "color-clicker-3eb6d.firebaseapp.com",
+  databaseURL: "https://color-clicker-3eb6d-default-rtdb.firebaseio.com",
+  projectId: "color-clicker-3eb6d",
+  storageBucket: "color-clicker-3eb6d.appspot.com",
+  messagingSenderId: "910886222869",
+  appId: "1:910886222869:web:791229bb8b33abb738e21c"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// --------------------
+// Poll setup
+// --------------------
+const colors = ['white', 'red', 'green', 'blue', 'grey', 'purple', 'pink'];
 const voteData = colors.reduce((acc, color) => ({
   ...acc,
   [color]: { counts: 0, timestamps: [], voteHistory: [] }
 }), {});
 
 const charts = {};
-const colorGrid = document.getElementById('color-grid');
+let colorGrid;
 let lastUpdateTime = Math.floor(Date.now() / 1000);
 
-// Create each color section
+// --------------------
+// Create buttons & charts
+// --------------------
 function createColorSection(color) {
   const section = document.createElement('div');
   section.className = 'color-section';
   section.dataset.color = color;
 
-  // Button
   const button = document.createElement('button');
   button.className = 'color-box';
   button.style.backgroundColor = color;
   button.innerHTML = `${color.charAt(0).toUpperCase() + color.slice(1)} (<span id="${color}-count">0</span>)`;
   button.addEventListener('click', () => vote(color));
 
-  // Chart
   const canvas = document.createElement('canvas');
   canvas.id = `chart-${color}`;
-  
+
   section.append(button, canvas);
   colorGrid.appendChild(section);
 
-  // Initialize chart
   const ctx = canvas.getContext('2d');
   charts[color] = new Chart(ctx, {
     type: 'line',
@@ -44,7 +66,7 @@ function createColorSection(color) {
         borderColor: color,
         borderWidth: 2,
         fill: true,
-        tension: 0.3 // smooth curves
+        tension: 0.3
       }]
     },
     options: {
@@ -58,7 +80,9 @@ function createColorSection(color) {
   });
 }
 
-// Update UI and charts
+// --------------------
+// Update UI & charts
+// --------------------
 function updateUI() {
   colors.forEach(color => {
     document.getElementById(`${color}-count`).textContent = voteData[color].counts;
@@ -69,31 +93,46 @@ function updateUI() {
   });
 }
 
-// Handle votes
+// --------------------
+// Vote function
+// --------------------
 function vote(color) {
-  voteData[color].counts++;
-  const currentTime = Math.floor(Date.now() / 1000);
-
-  if (!voteData[color].timestamps.length || voteData[color].timestamps.slice(-1)[0] !== currentTime) {
-    voteData[color].timestamps.push(currentTime);
-    voteData[color].voteHistory.push(voteData[color].counts);
-  } else {
-    voteData[color].voteHistory[voteData[color].voteHistory.length - 1] = voteData[color].counts;
-  }
-
-  updateUI();
+  const voteRef = ref(db, `votes/${color}`);
+  runTransaction(voteRef, current => (current || 0) + 1);
 }
 
-// Real-time chart updates
+// --------------------
+// Listen for Firebase updates
+// --------------------
+function listenVotes() {
+  colors.forEach(color => {
+    const voteRef = ref(db, `votes/${color}`);
+    onValue(voteRef, snapshot => {
+      const count = snapshot.val() || 0;
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      voteData[color].counts = count;
+
+      if (!voteData[color].timestamps.length || voteData[color].timestamps.slice(-1)[0] !== currentTime) {
+        voteData[color].timestamps.push(currentTime);
+        voteData[color].voteHistory.push(count);
+      } else {
+        voteData[color].voteHistory[voteData[color].voteHistory.length - 1] = count;
+      }
+
+      updateUI();
+    });
+  });
+}
+
+// --------------------
+// Tick for chart updates
+// --------------------
 function tick() {
   const currentTime = Math.floor(Date.now() / 1000);
   if (currentTime !== lastUpdateTime) {
     lastUpdateTime = currentTime;
     colors.forEach(color => {
-      if (!voteData[color].timestamps.length || voteData[color].timestamps.slice(-1)[0] !== currentTime) {
-        voteData[color].timestamps.push(currentTime);
-        voteData[color].voteHistory.push(voteData[color].counts);
-      }
       const chart = charts[color];
       chart.data.labels = voteData[color].timestamps;
       chart.data.datasets[0].data = voteData[color].voteHistory;
@@ -102,7 +141,12 @@ function tick() {
   }
 }
 
-// Initialize
-colors.forEach(createColorSection);
-updateUI();
-setInterval(tick, 1000);
+// --------------------
+// Initialize after DOM loads
+// --------------------
+document.addEventListener('DOMContentLoaded', () => {
+  colorGrid = document.getElementById('color-grid');
+  colors.forEach(createColorSection);
+  listenVotes();
+  setInterval(tick, 1000);
+});
