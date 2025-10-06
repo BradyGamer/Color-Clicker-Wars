@@ -1,5 +1,5 @@
-// Colors to vote for
-const colors = ['white', 'red', 'green', 'blue', 'grey', 'black', 'purple', 'pink'];
+// Colors to vote for (removed black)
+const colors = ['white', 'red', 'green', 'blue', 'grey', 'purple', 'pink'];
 
 // Store votes and chart history
 const voteData = colors.reduce((acc, color) => ({
